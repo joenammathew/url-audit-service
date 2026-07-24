@@ -1,12 +1,10 @@
-import express, { Request, Response } from 'express';
-import cors from 'cors';
-import axios from 'axios';
-import rateLimit from 'express-rate-limit';
-import NodeCache from 'node-cache';
-import dotenv from 'dotenv';
-
-// Load environment variables
-dotenv.config();
+const express = require('express');
+const axios = require('axios');
+const cheerio = require('cheerio');
+const cors = require('cors');
+const rateLimit = require('express-rate-limit');
+const NodeCache = require('node-cache');
+require('dotenv').config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -37,7 +35,7 @@ const cache = new NodeCache({
 // --- ROUTES ---
 
 // Home route with credit line
-app.get('/', (req: Request, res: Response) => {
+app.get('/', (req, res) => {
   res.send(`
     <html>
       <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
@@ -50,7 +48,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Health check
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
@@ -58,8 +56,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Main audit endpoint - simplified for testing
-app.get('/api/audit', limiter, async (req: Request, res: Response) => {
+// Main audit endpoint
+app.get('/api/audit', limiter, async (req, res) => {
   const { url } = req.query;
 
   console.log(`📥 Audit request received for: ${url}`);
@@ -96,7 +94,7 @@ app.get('/api/audit', limiter, async (req: Request, res: Response) => {
     });
   }
 
-  console.log(`🔄 Fetching: ${url}...`);
+  console.log(`🔄 Cache miss for: ${url}, fetching...`);
 
   try {
     // Fetch the website
@@ -107,17 +105,28 @@ app.get('/api/audit', limiter, async (req: Request, res: Response) => {
       }
     });
 
-    // Simple result without cheerio (for testing)
+    // Parse HTML with cheerio
+    const $ = cheerio.load(response.data);
+    
+    // Extract data
     const result = {
       url,
       status: response.status,
-      statusText: response.statusText,
       responseTimeMs: response.headers['x-response-time'] || 'N/A',
       contentLength: response.data.length,
-      contentType: response.headers['content-type'],
+      title: $('title').text().trim() || undefined,
+      metaDescription: $('meta[name="description"]').attr('content') || undefined,
+      headings: {
+        h1: $('h1').map((_, el) => $(el).text().trim()).get().slice(0, 10),
+        h2: $('h2').map((_, el) => $(el).text().trim()).get().slice(0, 10),
+        h3: $('h3').map((_, el) => $(el).text().trim()).get().slice(0, 10)
+      },
+      links: {
+        internal: $('a[href^="/"]').map((_, el) => $(el).attr('href')).get().slice(0, 20),
+        external: $('a[href^="http"]').map((_, el) => $(el).attr('href')).get().slice(0, 20)
+      },
       cached: false,
-      timestamp: new Date().toISOString(),
-      message: 'Audit successful! Cheerio parsing will be added next.'
+      timestamp: new Date().toISOString()
     };
 
     // Save to cache
@@ -125,7 +134,7 @@ app.get('/api/audit', limiter, async (req: Request, res: Response) => {
     console.log(`💾 Cached: ${url}`);
 
     res.json(result);
-  } catch (error: any) {
+  } catch (error) {
     console.error(`❌ Error auditing ${url}:`, error.message);
     
     // Handle specific errors

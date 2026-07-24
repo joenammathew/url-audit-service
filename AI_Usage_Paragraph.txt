@@ -1,0 +1,21 @@
+I used AI (ChatGPT/Claude) to help me complete this project. Specifically:
+
+1. Understanding Requirements: I used AI to help me understand the project brief and break down the requirements for both Task A and Task B.
+
+2. Code Structure: I used AI to generate the initial Express.js boilerplate, the caching mechanism, and the rate limiting setup. I thoroughly reviewed and refactored all the code.
+
+3. Debugging: When I encountered the Cheerio import error (TS2698), I used AI to help diagnose the issue and fix it by switching from import to require.
+
+4. Error Handling: I used AI to understand different HTTP error codes and implemented specific handling for timeouts, invalid URLs, and domain not found errors.
+
+5. Documentation: I used AI to structure the Task B documents (architecture, technology choices, failure modes, observability plan), but all technical decisions are my own.
+
+What I changed afterward:
+- Fixed the Cheerio import issue by using require instead of import
+- Added specific error handling for different failure modes
+- Implemented caching with proper TTL settings
+- Added rate limiting with custom messages
+- Created a beautiful root page with credit line
+- Added 404 handler for unknown routes
+- Deployed on Render.com with my own configuration
+- Tested all endpoints thoroughly
