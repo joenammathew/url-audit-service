@@ -37,11 +37,88 @@ const cache = new NodeCache({
 // Home route with credit line
 app.get('/', (req, res) => {
   res.send(`
+    <!DOCTYPE html>
     <html>
-      <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-        <h1>🔍 URL Audit Service</h1>
-        <p>Built for Digital Heroes Training Task</p>
-        <a href="https://digitalheroesco.com" target="_blank">Digital Heroes</a>
+      <head>
+        <title>URL Audit Service</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 50px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          }
+          .container {
+            background: rgba(255,255,255,0.1);
+            padding: 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            max-width: 600px;
+          }
+          h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+          }
+          .emoji {
+            font-size: 64px;
+          }
+          .subtitle {
+            font-size: 20px;
+            margin-bottom: 30px;
+            opacity: 0.9;
+          }
+          .credit {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.3);
+          }
+          .credit a {
+            color: #ffd700;
+            text-decoration: none;
+            font-weight: bold;
+          }
+          .credit a:hover {
+            text-decoration: underline;
+          }
+          .endpoints {
+            text-align: left;
+            background: rgba(0,0,0,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+          }
+          .endpoints code {
+            background: rgba(0,0,0,0.3);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            color: #ffd700;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="emoji">🔍</div>
+          <h1>URL Audit Service</h1>
+          <p class="subtitle">Analyze any website in seconds</p>
+          
+          <div class="endpoints">
+            <h3>📌 Available Endpoints</h3>
+            <p><code>GET /health</code> - Check service status</p>
+            <p><code>GET /api/audit?url=https://example.com</code> - Audit a website</p>
+          </div>
+          
+          <div class="credit">
+            <p>Built for <a href="https://digitalheroesco.com" target="_blank">Digital Heroes</a> Training Task</p>
+          </div>
+        </div>
       </body>
     </html>
   `);
@@ -52,7 +129,9 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
+    cacheSize: cache.getStats().keys,
+    version: '1.0.0'
   });
 });
 
@@ -112,8 +191,10 @@ app.get('/api/audit', limiter, async (req, res) => {
     const result = {
       url,
       status: response.status,
+      statusText: response.statusText,
       responseTimeMs: response.headers['x-response-time'] || 'N/A',
       contentLength: response.data.length,
+      contentType: response.headers['content-type'],
       title: $('title').text().trim() || undefined,
       metaDescription: $('meta[name="description"]').attr('content') || undefined,
       headings: {
@@ -161,9 +242,21 @@ app.get('/api/audit', limiter, async (req, res) => {
   }
 });
 
+// 404 handler for unknown routes
+app.use((req, res) => {
+  res.status(404).json({
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Endpoint not found. Available: GET /, /health, /api/audit'
+    }
+  });
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 URL Audit Service running on port ${PORT}`);
   console.log(`📝 Health check: http://localhost:${PORT}/health`);
   console.log(`🔍 Test: http://localhost:${PORT}/api/audit?url=https://example.com`);
 });
+
+module.exports = app;
